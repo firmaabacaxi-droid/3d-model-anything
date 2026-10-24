@@ -1,0 +1,76 @@
+name: Build iOS IPA
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  build-ipa:
+    runs-on: macos-14
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: |
+          brew install xcodegen
+          xcodegen --version
+
+      - name: Generate Xcode Project
+        run: |
+          cd apps/house-capture
+          xcodegen generate
+
+      - name: Build HouseCapture for iOS
+        run: |
+          cd apps/house-capture
+          xcodebuild -project HouseCapture.xcodeproj \
+            -scheme HouseCapture \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            AD_HOC_CODE_SIGNING_ALLOWED=YES \
+            clean build
+
+      - name: Package IPA
+        run: |
+          cd apps/house-capture
+          mkdir -p Payload
+          cp -r build/Build/Products/Release-iphoneos/HouseCapture.app Payload/
+          zip -r HouseCapture.ipa Payload
+          ls -lh HouseCapture.ipa
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: HouseCapture-ipa
+          path: apps/house-capture/HouseCapture.ipa
+          retention-days: 14
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.0
+          name: HouseCapture iOS (v1.0.0)
+          body: |
+            ## HouseCapture (3D Model Anything) para iOS
+            Arquivo `.ipa` compilado para instalação via Sideloadly no Windows.
+            
+            ### Como instalar no iPhone pelo Windows:
+            1. Baixe o arquivo `HouseCapture.ipa` abaixo.
+            2. Conecte o seu iPhone ao PC usando o cabo USB.
+            3. Abra o **Sideloadly** (https://sideloadly.io).
+            4. Arraste o arquivo `HouseCapture.ipa` para dentro do Sideloadly.
+            5. Insira o seu Apple ID e clique em **Start**.
+            6. No iPhone, vá em **Ajustes > Geral > Gerenciamento de VPN e Dispositivo**, toque na sua conta e selecione **Confiar**.
+          files: apps/house-capture/HouseCapture.ipa
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
