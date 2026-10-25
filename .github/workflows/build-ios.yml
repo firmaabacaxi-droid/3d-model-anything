@@ -11,15 +11,14 @@ permissions:
 
 jobs:
   build-ipa:
-    runs-on: macos-15
+    runs-on: macos-14
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Inspect and Select Xcode
+      - name: Select Xcode 15.4
         run: |
-          ls -d /Applications/Xcode*.app || true
-          sudo xcode-select -s /Applications/Xcode_16.app || sudo xcode-select -s /Applications/Xcode.app
+          sudo xcode-select -s /Applications/Xcode_15.4.app
           xcodebuild -version
 
       - name: Install XcodeGen
@@ -31,6 +30,8 @@ jobs:
         run: |
           cd apps/house-capture
           xcodegen generate
+          sed -i '' 's/objectVersion = [0-9]*;/objectVersion = 56;/g' HouseCapture.xcodeproj/project.pbxproj
+          grep "objectVersion" HouseCapture.xcodeproj/project.pbxproj
 
       - name: Build HouseCapture for iOS
         run: |
