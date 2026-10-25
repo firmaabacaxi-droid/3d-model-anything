@@ -757,14 +757,25 @@ final class CoverageEngine: @unchecked Sendable {
       let x = simd_make_float3(t.columns.0), y = simd_make_float3(t.columns.1), z = simd_make_float3(t.columns.2)
       let c = simd_make_float3(t.columns.3)
       // top + four sides
-      for (off, n, w, h, ax, ay) in [
-        (y * d.y / 2, y, d.x, d.z, x, z),
-        (z * d.z / 2, z, d.x, d.y, x, y), (-z * d.z / 2, -z, d.x, d.y, x, y),
-        (x * d.x / 2, x, d.z, d.y, z, y), (-x * d.x / 2, -x, d.z, d.y, z, y),
-      ] {
+      struct BoxFace {
+        let off: simd_float3
+        let n: simd_float3
+        let w: Float
+        let h: Float
+        let ax: simd_float3
+        let ay: simd_float3
+      }
+      let faces: [BoxFace] = [
+        BoxFace(off: y * (d.y / 2), n: y, w: d.x, h: d.z, ax: x, ay: z),
+        BoxFace(off: z * (d.z / 2), n: z, w: d.x, h: d.y, ax: x, ay: y),
+        BoxFace(off: -z * (d.z / 2), n: -z, w: d.x, h: d.y, ax: x, ay: y),
+        BoxFace(off: x * (d.x / 2), n: x, w: d.z, h: d.y, ax: z, ay: y),
+        BoxFace(off: -x * (d.x / 2), n: -x, w: d.z, h: d.y, ax: z, ay: y),
+      ]
+      for face in faces {
         var m = matrix_identity_float4x4
-        m.columns.0 = SIMD4(ax, 0); m.columns.1 = SIMD4(ay, 0); m.columns.2 = SIMD4(n, 0); m.columns.3 = SIMD4(c + off, 1)
-        surface(m, w, h, n)
+        m.columns.0 = SIMD4(face.ax, 0); m.columns.1 = SIMD4(face.ay, 0); m.columns.2 = SIMD4(face.n, 0); m.columns.3 = SIMD4(c + face.off, 1)
+        surface(m, face.w, face.h, face.n)
       }
     }
     return out
